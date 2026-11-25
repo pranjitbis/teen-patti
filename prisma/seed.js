@@ -4,7 +4,13 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding Teen Patti Gaming Platform database...');
+  console.log('Checking Teen Patti Gaming Platform database seed...');
+
+  const userCount = await prisma.user.count();
+  if (userCount > 0) {
+    console.log(`Database already has ${userCount} users. Seed already present. Skipping.`);
+    return;
+  }
 
   // Clear existing
   await prisma.auditLog.deleteMany({});
