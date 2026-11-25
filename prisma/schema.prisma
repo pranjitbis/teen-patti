@@ -1,0 +1,84 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id              String         @id @default(uuid())
+  username        String         @unique
+  name            String
+  email           String         @unique
+  phone           String?
+  passwordHash    String
+  role            String         @default("PLAYER") // "PLAYER" or "ADMIN"
+  balance         Float          @default(5000.0) // live account balance in INR
+  totalDeposited  Float          @default(5000.0) // total amount invested / deposited in INR
+  totalWithdrawn  Float          @default(0.0)
+  avatar          String         @default("avatar-1")
+  vipTier         String         @default("GOLD")
+  isBanned        Boolean        @default(false)
+  gamesPlayed     Int            @default(0)
+  gamesWon        Int            @default(0)
+  totalWinnings   Float          @default(0.0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  transactions    Transaction[]
+  matchHistories  MatchHistory[]
+  adminLogs       AuditLog[]     @relation("AdminAuditLogs")
+}
+
+model Transaction {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Float     // Positive for deposit/win/credit, negative for bet/debit
+  type          String    // DEPOSIT, WITHDRAWAL, ADMIN_CREDIT, ADMIN_DEBIT, GAME_BET, GAME_WIN
+  balanceAfter  Float
+  description   String?
+  createdAt     DateTime  @default(now())
+}
+
+model MatchHistory {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tableName     String
+  bootAmount    Float
+  totalPot      Float
+  result        String    // "WIN", "LOSS", "FOLD"
+  amountChange  Float     // +₹240 or -₹50
+  cardsJson     String    // JSON stringified cards
+  handRank      String?   // "Trail", "Pure Sequence", "Sequence", "Color", "Pair", "High Card"
+  opponents     String?   // Summary of table opponents
+  createdAt     DateTime  @default(now())
+}
+
+model AuditLog {
+  id             String    @id @default(uuid())
+  adminId        String
+  admin          User      @relation("AdminAuditLogs", fields: [adminId], references: [id])
+  targetUserId   String
+  targetUsername String
+  action         String    // "BALANCE_ADJUSTMENT", "STATUS_CHANGE", etc.
+  previousBalance Float
+  newBalance     Float
+  changeAmount   Float
+  reason         String
+  createdAt      DateTime  @default(now())
+}
+
+model GameTable {
+  id          String   @id @default(uuid())
+  name        String
+  tier        String   // "Novice", "Challenger", "High Roller", "Royale VIP"
+  bootAmount  Float    // ₹10, ₹50, ₹200, ₹1000
+  minBalance  Float    // Required balance to enter
+  maxBet      Float
+  maxPlayers  Int      @default(6)
+  active      Boolean  @default(true)
+}
