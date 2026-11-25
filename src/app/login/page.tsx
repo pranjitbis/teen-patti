@@ -348,7 +348,10 @@ export default function LoginPage() {
               className="w-full py-3.5 px-4 bg-gradient-to-r from-gold-500 via-amber-500 to-yellow-600 hover:from-gold-400 hover:to-amber-500 text-slate-950 font-black text-sm uppercase tracking-wider rounded-xl shadow-xl shadow-gold-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50 mt-4"
             >
               {loading ? (
-                'Authenticating...'
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                  <span>Connecting to Cloud DB...</span>
+                </div>
               ) : (
                 <>
                   <span>{isRegister ? 'Complete Registration' : 'Enter Casino Table'}</span>

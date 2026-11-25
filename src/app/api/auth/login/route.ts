@@ -13,14 +13,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Please provide email/username and password' }, { status: 400 });
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: idVal.toLowerCase().trim() },
-          { username: idVal.toLowerCase().trim() },
-        ],
-      },
-    });
+    const cleanIdent = idVal.toLowerCase().trim();
+
+    // Query user with auto-retry if connection was cold
+    let user;
+    try {
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: cleanIdent },
+            { username: cleanIdent },
+          ],
+        },
+      });
+    } catch (initialErr: any) {
+      console.warn('[Login] DB connection retry due to:', initialErr.message);
+      await prisma.$connect().catch(() => {});
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: cleanIdent },
+            { username: cleanIdent },
+          ],
+        },
+      });
+    }
 
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials. User not found.' }, { status: 401 });
@@ -66,6 +83,16 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error: any) {
     console.error('Login error:', error);
-    return NextResponse.json({ error: 'Server error during login' }, { status: 500 });
+    const msg = error?.message || '';
+    if (msg.includes('Timed out') || msg.includes('Can\'t reach') || msg.includes('connection')) {
+      return NextResponse.json(
+        { error: 'Cloud database is waking up. Please click Login once more.' },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json(
+      { error: error?.message || 'Authentication error. Please try again.' },
+      { status: 500 }
+    );
   }
 }
